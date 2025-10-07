@@ -11,7 +11,10 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  origin: [
+    'http://localhost:3000',
+    'https://fnf-admin.onrender.com'
+  ],
   credentials: true
 }));
 app.use(morgan('dev'));
@@ -80,3 +83,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
