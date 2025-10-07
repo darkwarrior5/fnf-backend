@@ -13,7 +13,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://fnf-admin.onrender.com'
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://fnf-admin.onrender.com',
+    'https://fnf-consumer.onrender.com'  // Add your consumer app URL here
   ],
   credentials: true
 }));
@@ -83,4 +86,5 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
 
