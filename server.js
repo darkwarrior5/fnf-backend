@@ -16,7 +16,11 @@ app.use(cors({
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'https://fnf-admin.onrender.com',
-    'https://fnf-consumer.onrender.com'  // Add your consumer app URL here
+    'https://fnf-consumer.onrender.com',
+    'https://fnf-admin.onrender.com/dashboard',
+    'https://fnf-admin.onrender.com/orders',
+    'https://fnf-admin.onrender.com/reports',
+    'https://fnf-admin.onrender.com/users' // Add your consumer app URL here
   ],
   credentials: true
 }));
