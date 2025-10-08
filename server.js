@@ -15,7 +15,7 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'https://fnf-admin.netlify.app/',
+    'https://fnf-admin.netlify.app',
     'https://fnf-consumer.onrender.com',
     'https://fnf-admin.onrender.com/dashboard',
     'https://fnf-admin.onrender.com/orders',
