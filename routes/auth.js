@@ -148,6 +148,64 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/firebase-login
+// @desc    Create or login customer after Firebase verification
+// @access  Public
+router.post('/firebase-login', async (req, res) => {
+  try {
+    const { phone, firstName, lastName, firebaseUid } = req.body;
+
+    if (!phone || !firebaseUid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Phone and Firebase UID are required' 
+      });
+    }
+
+    // Find or create customer
+    let customer = await Customer.findOne({ phone });
+
+    if (!customer) {
+      // Create new customer
+      customer = await Customer.create({
+        phone,
+        firstName: firstName || 'Customer',
+        lastName: lastName || '',
+        firebaseUid,
+        isVerified: true
+      });
+      console.log('✅ New customer created:', customer.phone);
+    } else {
+      // Update existing customer
+      customer.firstName = firstName || customer.firstName;
+      customer.lastName = lastName || customer.lastName;
+      customer.firebaseUid = firebaseUid;
+      customer.isVerified = true;
+      await customer.save();
+      console.log('✅ Customer updated:', customer.phone);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Customer authenticated successfully',
+      customer: {
+        id: customer._id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phone: customer.phone,
+        email: customer.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Firebase login error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error during authentication' 
+    });
+  }
+});
+
 // ============================================
 // ADMIN AUTHENTICATION ROUTES
 // ============================================

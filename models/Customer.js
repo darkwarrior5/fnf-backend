@@ -24,6 +24,11 @@ const customerSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
   },
+  firebaseUid: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
   address: {
     street: String,
     city: String,
