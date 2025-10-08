@@ -4,6 +4,7 @@ const Customer = require('../models/Customer');
 const OTP = require('../models/OTP');
 const Admin = require('../models/Admin');
 const jwt = require('jsonwebtoken');
+const smsService = require('../services/smsService');
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -42,14 +43,20 @@ router.post('/send-otp', async (req, res) => {
     // Save OTP to database
     await OTP.create({ phone, otp, expiresAt });
 
-    // TODO: Send OTP via SMS (Twilio, AWS SNS, etc.)
-    console.log(`📱 OTP for ${phone}: ${otp}`);
+    // Send OTP via SMS service
+    const smsResult = await smsService.sendOTP(phone, otp);
+    
+    if (!smsResult.success) {
+      console.error('SMS sending failed:', smsResult.message);
+      // Still return success to user, but log the error
+    }
 
     res.json({ 
       success: true, 
-      message: 'OTP sent successfully',
+      message: smsResult.message || 'OTP sent successfully',
+      provider: smsResult.provider,
       // For development only - remove in production!
-      dev_otp: process.env.NODE_ENV === 'development' ? otp : undefined
+      dev_otp: process.env.NODE_ENV === 'development' ? smsResult.dev_otp : undefined
     });
 
   } catch (error) {
