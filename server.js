@@ -19,12 +19,9 @@ app.use(cors({
     'http://127.0.0.1:8080',
     'https://fnf-admin.netlify.app',
     'https://fnf-consumer.netlify.app',
-    'https://fnf-consumer.onrender.com',
-    '*' // Allow all origins for now to fix CORS
+    'https://fnf-consumer.onrender.com'
   ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
+  credentials: true
 }));
 
 // Security headers for better browser compatibility
