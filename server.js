@@ -108,12 +108,16 @@ if (!admin.apps.length) {
 // Firebase OTP SMS endpoints
 app.post('/api/send-verification', async (req, res) => {
   try {
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+    
     const { phoneNumber } = req.body;
     
     if (!phoneNumber) {
       return res.status(400).json({
         success: false,
-        message: 'Phone number is required'
+        message: 'Phone number is required',
+        received: req.body
       });
     }
 
