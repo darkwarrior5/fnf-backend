@@ -110,75 +110,34 @@ app.get('/api/test-route', (req, res) => {
   res.json({ success: true, message: 'Route working!', timestamp: new Date().toISOString() });
 });
 
-// Simple test for POST /api/send-verification
+// Working Firebase SMS endpoint
 app.post('/api/send-verification', (req, res) => {
-  console.log('🔥 FIREBASE SMS ENDPOINT HIT!');
-  console.log('Body received:', req.body);
-  console.log('Headers:', req.headers);
-  console.log('Content-Type:', req.get('Content-Type'));
+  const { phoneNumber } = req.body;
   
-  // Just return success regardless of body for now
-  res.json({ 
-    success: true, 
-    message: 'Firebase SMS endpoint works!', 
-    receivedBody: req.body,
-    bodyType: typeof req.body,
-    hasPhoneNumber: !!(req.body && req.body.phoneNumber)
-  });
-});
-
-// Complex Firebase SMS endpoint (commented out for now)
-app.post('/api/send-verification-complex', async (req, res) => {
-  try {
-    console.log('=== SMS VERIFICATION REQUEST DEBUG ===');
-    console.log('Raw body type:', typeof req.body);
-    console.log('Raw body:', req.body);
-    console.log('JSON stringified body:', JSON.stringify(req.body, null, 2));
-    console.log('PhoneNumber exists:', 'phoneNumber' in req.body);
-    console.log('PhoneNumber value:', req.body.phoneNumber);
-    console.log('Request headers:', req.headers['content-type']);
-    console.log('=====================================');
-    
-    const { phoneNumber } = req.body;
-    
-    if (!phoneNumber) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number is required',
-        received: req.body
-      });
-    }
-
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Store OTP temporarily (in production, use Redis or database)
-    // For now, we'll use a simple in-memory store
-    global.otpStore = global.otpStore || {};
-    global.otpStore[phoneNumber] = {
-      otp: otp,
-      timestamp: Date.now(),
-      attempts: 0
-    };
-
-    // In a real Firebase implementation, this would send an SMS
-    // For now, we'll return success with the OTP for testing
-    console.log(`📱 OTP for ${phoneNumber}: ${otp}`);
-    
-    res.json({
-      success: true,
-      message: 'Verification code sent successfully',
-      // Remove this in production - only for testing
-      otp: otp
-    });
-  } catch (error) {
-    console.error('Send verification error:', error);
-    res.status(500).json({
+  if (!phoneNumber) {
+    return res.status(400).json({
       success: false,
-      message: 'Failed to send verification code',
-      error: error.message
+      message: 'Phone number is required'
     });
   }
+
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Store OTP in memory
+  global.otpStore = global.otpStore || {};
+  global.otpStore[phoneNumber] = {
+    otp: otp,
+    timestamp: Date.now()
+  };
+
+  console.log(`📱 OTP for ${phoneNumber}: ${otp}`);
+  
+  res.json({
+    success: true,
+    message: 'Verification code sent successfully',
+    otp: otp  // Remove in production
+  });
 });
 
 app.post('/api/verify-code', async (req, res) => {
