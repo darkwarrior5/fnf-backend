@@ -105,56 +105,125 @@ if (!admin.apps.length) {
   console.log('✅ Firebase Admin initialized successfully!');
 }
 
-// Check Twilio configuration endpoint
-app.get('/api/verify/config', (req, res) => {
-  res.json({
-    success: true,
-    configured: twilioVerifyService.isConfigured(),
-    message: twilioVerifyService.isConfigured() ? 'Twilio Verify is configured' : 'Twilio Verify not configured'
-  });
-});
-
-// Get Twilio account info (admin only)
-app.get('/api/verify/account', async (req, res) => {
+// Firebase OTP SMS endpoints
+app.post('/api/send-verification', async (req, res) => {
   try {
-    const result = await twilioVerifyService.getAccountInfo();
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch account info',
-      error: error.message
-    });
-  }
-});
+    const { phoneNumber } = req.body;
+    
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
+      });
+    }
 
-// Debug endpoint to check credentials format
-app.get('/api/verify/debug', async (req, res) => {
-  try {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const verifySid = process.env.TWILIO_VERIFY_SID;
+    // Generate a 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP temporarily (in production, use Redis or database)
+    // For now, we'll use a simple in-memory store
+    global.otpStore = global.otpStore || {};
+    global.otpStore[phoneNumber] = {
+      otp: otp,
+      timestamp: Date.now(),
+      attempts: 0
+    };
+
+    // In a real Firebase implementation, this would send an SMS
+    // For now, we'll return success with the OTP for testing
+    console.log(`📱 OTP for ${phoneNumber}: ${otp}`);
     
     res.json({
       success: true,
-      debug: {
-        hasAccountSid: !!accountSid,
-        accountSidLength: accountSid ? accountSid.length : 0,
-        accountSidPrefix: accountSid ? accountSid.substring(0, 5) + '...' : null,
-        hasAuthToken: !!authToken,
-        authTokenLength: authToken ? authToken.length : 0,
-        hasVerifySid: !!verifySid,
-        verifySidLength: verifySid ? verifySid.length : 0,
-        verifySidPrefix: verifySid ? verifySid.substring(0, 5) + '...' : null
-      }
+      message: 'Verification code sent successfully',
+      // Remove this in production - only for testing
+      otp: otp
     });
   } catch (error) {
+    console.error('Send verification error:', error);
     res.status(500).json({
       success: false,
-      message: 'Debug check failed',
+      message: 'Failed to send verification code',
       error: error.message
     });
   }
+});
+
+app.post('/api/verify-code', async (req, res) => {
+  try {
+    const { phoneNumber, code } = req.body;
+    
+    if (!phoneNumber || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and verification code are required'
+      });
+    }
+
+    const stored = global.otpStore?.[phoneNumber];
+    
+    if (!stored) {
+      return res.status(400).json({
+        success: false,
+        message: 'No verification code found for this phone number'
+      });
+    }
+
+    // Check if OTP is expired (5 minutes)
+    const isExpired = Date.now() - stored.timestamp > 5 * 60 * 1000;
+    
+    if (isExpired) {
+      delete global.otpStore[phoneNumber];
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code has expired'
+      });
+    }
+
+    // Check if code matches
+    if (stored.otp !== code) {
+      stored.attempts += 1;
+      
+      if (stored.attempts >= 3) {
+        delete global.otpStore[phoneNumber];
+        return res.status(400).json({
+          success: false,
+          message: 'Too many failed attempts. Please request a new code.'
+        });
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification code'
+      });
+    }
+
+    // Success - clean up
+    delete global.otpStore[phoneNumber];
+    
+    res.json({
+      success: true,
+      message: 'Phone number verified successfully'
+    });
+  } catch (error) {
+    console.error('Verify code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify code',
+      error: error.message
+    });
+  }
+});
+
+// Check Firebase configuration endpoint
+app.get('/api/verify/config', (req, res) => {
+  const isConfigured = !!(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY);
+  res.json({
+    success: true,
+    configured: isConfigured,
+    provider: 'Firebase',
+    message: isConfigured ? 'Firebase is configured' : 'Firebase not configured'
+  });
 });
 
 // Firebase OTP Status Check
@@ -183,14 +252,16 @@ app.get('/api/firebase/status', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'FNF Backend API is running with Firebase OTP!',
-    version: '2.0.0',
-    provider: 'Firebase',
+    message: 'FNF Backend API is running!',
+    version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
       orders: '/api/orders',
       customers: '/api/customers',
-      firebaseStatus: '/api/firebase/status'
+      sendVerification: '/api/send-verification',
+      verifyCode: '/api/verify-code',
+      verifyConfig: '/api/verify/config',
+      verifyDebug: '/api/verify/debug'
     }
   });
 });
