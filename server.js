@@ -105,6 +105,11 @@ if (!admin.apps.length) {
   console.log('✅ Firebase Admin initialized successfully!');
 }
 
+// Test endpoint to verify routing
+app.get('/api/test-route', (req, res) => {
+  res.json({ success: true, message: 'Route working!', timestamp: new Date().toISOString() });
+});
+
 // Firebase OTP SMS endpoints
 app.post('/api/send-verification', async (req, res) => {
   try {
