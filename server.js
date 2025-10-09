@@ -110,8 +110,15 @@ app.get('/api/test-route', (req, res) => {
   res.json({ success: true, message: 'Route working!', timestamp: new Date().toISOString() });
 });
 
-// Firebase OTP SMS endpoints
-app.post('/api/send-verification', async (req, res) => {
+// Simple test for POST /api/send-verification
+app.post('/api/send-verification', (req, res) => {
+  console.log('🔥 FIREBASE SMS ENDPOINT HIT!');
+  console.log('Body received:', req.body);
+  res.json({ success: true, message: 'Firebase SMS endpoint works!', receivedBody: req.body });
+});
+
+// Complex Firebase SMS endpoint (commented out for now)
+app.post('/api/send-verification-complex', async (req, res) => {
   try {
     console.log('=== SMS VERIFICATION REQUEST DEBUG ===');
     console.log('Raw body type:', typeof req.body);
