@@ -2,6 +2,69 @@ const express = require('express');
 const router = express.Router();
 const Customer = require('../models/Customer');
 
+// @route   POST /api/customers/sync
+// @desc    Sync Firebase user to MongoDB (create or update)
+// @access  Public
+router.post('/sync', async (req, res) => {
+  try {
+    const { firebaseUid, firstName, lastName, phone, email } = req.body;
+    
+    if (!firebaseUid || !firstName || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Firebase UID, first name, and phone are required'
+      });
+    }
+    
+    // Find existing customer by Firebase UID or create new
+    let customer = await Customer.findOne({ firebaseUid });
+    
+    if (customer) {
+      // Update existing customer
+      customer.firstName = firstName;
+      customer.lastName = lastName || '';
+      customer.phone = phone;
+      customer.email = email || '';
+      customer.lastLogin = new Date();
+      await customer.save();
+      
+      console.log('✅ Customer updated:', customer._id);
+    } else {
+      // Create new customer
+      customer = await Customer.create({
+        firebaseUid,
+        firstName,
+        lastName: lastName || '',
+        phone,
+        email: email || '',
+        lastLogin: new Date()
+      });
+      
+      console.log('✅ Customer created:', customer._id);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Customer synced successfully',
+      customer: {
+        _id: customer._id,
+        firebaseUid: customer.firebaseUid,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phone: customer.phone,
+        email: customer.email
+      }
+    });
+    
+  } catch (error) {
+    console.error('Customer sync error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error syncing customer'
+    });
+  }
+});
+
 // @route   GET /api/customers
 // @desc    Get all customers
 // @access  Public
