@@ -114,7 +114,17 @@ app.get('/api/test-route', (req, res) => {
 app.post('/api/send-verification', (req, res) => {
   console.log('🔥 FIREBASE SMS ENDPOINT HIT!');
   console.log('Body received:', req.body);
-  res.json({ success: true, message: 'Firebase SMS endpoint works!', receivedBody: req.body });
+  console.log('Headers:', req.headers);
+  console.log('Content-Type:', req.get('Content-Type'));
+  
+  // Just return success regardless of body for now
+  res.json({ 
+    success: true, 
+    message: 'Firebase SMS endpoint works!', 
+    receivedBody: req.body,
+    bodyType: typeof req.body,
+    hasPhoneNumber: !!(req.body && req.body.phoneNumber)
+  });
 });
 
 // Complex Firebase SMS endpoint (commented out for now)
