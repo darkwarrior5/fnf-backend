@@ -107,17 +107,6 @@ app.post('/api/send-verification', async (req, res) => {
     // Send verification code via Twilio
     const result = await twilioVerifyService.sendVerification(phone);
 
-    // If Twilio authentication fails, provide development fallback
-    if (!result.success && result.errorCode === 20003) {
-      console.warn('⚠️ Twilio authentication failed, using development mode');
-      return res.json({
-        success: true,
-        message: 'Verification code sent (development mode)',
-        developmentMode: true,
-        developmentCode: '123456'
-      });
-    }
-
     res.json(result);
 
   } catch (error) {
@@ -154,16 +143,6 @@ app.post('/api/verify-code', async (req, res) => {
     // Verify code via Twilio
     const result = await twilioVerifyService.verifyCode(phone, code);
 
-    // If Twilio authentication fails, provide development fallback
-    if (!result.success && result.errorCode === 20003) {
-      console.warn('⚠️ Twilio authentication failed, using development mode verification');
-      return res.json({
-        success: code === '123456',
-        message: code === '123456' ? 'Verified successfully (development mode)' : 'Invalid code',
-        developmentMode: true
-      });
-    }
-
     res.json(result);
 
   } catch (error) {
@@ -199,6 +178,35 @@ app.get('/api/verify/account', async (req, res) => {
   }
 });
 
+// Debug endpoint to check credentials format
+app.get('/api/verify/debug', async (req, res) => {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const verifySid = process.env.TWILIO_VERIFY_SID;
+    
+    res.json({
+      success: true,
+      debug: {
+        hasAccountSid: !!accountSid,
+        accountSidLength: accountSid ? accountSid.length : 0,
+        accountSidPrefix: accountSid ? accountSid.substring(0, 5) + '...' : null,
+        hasAuthToken: !!authToken,
+        authTokenLength: authToken ? authToken.length : 0,
+        hasVerifySid: !!verifySid,
+        verifySidLength: verifySid ? verifySid.length : 0,
+        verifySidPrefix: verifySid ? verifySid.substring(0, 5) + '...' : null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Debug check failed',
+      error: error.message
+    });
+  }
+});
+
 // Health Check Route
 app.get('/', (req, res) => {
   res.json({
@@ -211,7 +219,8 @@ app.get('/', (req, res) => {
       customers: '/api/customers',
       sendVerification: '/api/send-verification',
       verifyCode: '/api/verify-code',
-      verifyConfig: '/api/verify/config'
+      verifyConfig: '/api/verify/config',
+      verifyDebug: '/api/verify/debug'
     }
   });
 });
