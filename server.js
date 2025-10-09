@@ -80,111 +80,30 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 
-// Twilio Verify Service
-const twilioVerifyService = require('./services/twilioVerifyService');
+// Firebase SMS OTP Service (Restored)
+const admin = require('firebase-admin');
 
-// Send verification code endpoint
-app.post('/api/send-verification', async (req, res) => {
-  try {
-    const { phone } = req.body;
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  const serviceAccount = {
+    type: "service_account",
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+    private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    client_id: process.env.FIREBASE_CLIENT_ID,
+    auth_uri: process.env.FIREBASE_AUTH_URI,
+    token_uri: process.env.FIREBASE_TOKEN_URI,
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
+  };
 
-    // Validate input
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number is required'
-      });
-    }
-
-    const smsProvider = process.env.SMS_PROVIDER || 'simple';
-
-    if (smsProvider === 'simple') {
-      // SIMPLE MODE - ALWAYS WORKS
-      console.log('📱 Using SIMPLE OTP mode for:', phone);
-      return res.json({
-        success: true,
-        message: 'OTP sent successfully! Use: 111111',
-        phone: phone,
-        otpCode: '111111',
-        provider: 'simple',
-        note: 'For demo/testing - use code 111111'
-      });
-    }
-
-    // Check if Twilio is configured
-    if (!twilioVerifyService.isConfigured()) {
-      return res.status(500).json({
-        success: false,
-        message: 'Twilio Verify not configured. Please set TWILIO credentials in environment variables.'
-      });
-    }
-
-    // Send verification code via Twilio
-    const result = await twilioVerifyService.sendVerification(phone);
-
-    res.json(result);
-
-  } catch (error) {
-    console.error('❌ Send Verification Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send verification code',
-      error: error.message
-    });
-  }
-});
-
-// Verify code endpoint
-app.post('/api/verify-code', async (req, res) => {
-  try {
-    const { phone, code } = req.body;
-
-    // Validate inputs
-    if (!phone || !code) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number and verification code are required'
-      });
-    }
-
-    const smsProvider = process.env.SMS_PROVIDER || 'simple';
-
-    if (smsProvider === 'simple') {
-      // SIMPLE MODE - ALWAYS WORKS
-      console.log('🔍 Verifying SIMPLE OTP for:', phone, 'Code:', code);
-      const isValid = code === '111111';
-      
-      return res.json({
-        success: isValid,
-        message: isValid ? 'OTP verified successfully!' : 'Invalid OTP. Use: 111111',
-        phone: phone,
-        provider: 'simple',
-        verified: isValid
-      });
-    }
-
-    // Check if Twilio is configured
-    if (!twilioVerifyService.isConfigured()) {
-      return res.status(500).json({
-        success: false,
-        message: 'Twilio Verify not configured'
-      });
-    }
-
-    // Verify code via Twilio
-    const result = await twilioVerifyService.verifyCode(phone, code);
-
-    res.json(result);
-
-  } catch (error) {
-    console.error('❌ Verify Code Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to verify code',
-      error: error.message
-    });
-  }
-});
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  
+  console.log('✅ Firebase Admin initialized successfully!');
+}
 
 // Check Twilio configuration endpoint
 app.get('/api/verify/config', (req, res) => {
@@ -238,20 +157,40 @@ app.get('/api/verify/debug', async (req, res) => {
   }
 });
 
+// Firebase OTP Status Check
+app.get('/api/firebase/status', (req, res) => {
+  try {
+    const isConfigured = !!(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY);
+    
+    res.json({
+      success: true,
+      firebase: {
+        configured: isConfigured,
+        projectId: process.env.FIREBASE_PROJECT_ID || 'Not set',
+        message: isConfigured ? 'Firebase is configured and ready' : 'Firebase configuration incomplete'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Firebase status check failed',
+      error: error.message
+    });
+  }
+});
+
 // Health Check Route
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'FNF Backend API is running!',
-    version: '1.0.0',
+    message: 'FNF Backend API is running with Firebase OTP!',
+    version: '2.0.0',
+    provider: 'Firebase',
     endpoints: {
       auth: '/api/auth',
       orders: '/api/orders',
       customers: '/api/customers',
-      sendVerification: '/api/send-verification',
-      verifyCode: '/api/verify-code',
-      verifyConfig: '/api/verify/config',
-      verifyDebug: '/api/verify/debug'
+      firebaseStatus: '/api/firebase/status'
     }
   });
 });
